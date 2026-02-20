@@ -1,0 +1,504 @@
+<?php
+session_start();
+include("../config/db.php");
+if (!isset($_SESSION['user'])) header("Location: ../auth/login.php");
+
+if(isset($_POST['bill'])){
+    $cid=$_POST['customer'];
+    $sid=$_POST['service'];
+    $qty=$_POST['qty'];
+
+    $s=mysqli_fetch_assoc(mysqli_query($conn,"SELECT * FROM services WHERE id=$sid"));
+    $total=$s['price']*$qty;
+
+    mysqli_query($conn,"INSERT INTO orders (customer_id,total,order_date)
+    VALUES ($cid,$total,CURDATE())");
+
+    $oid=mysqli_insert_id($conn);
+
+    mysqli_query($conn,"INSERT INTO order_items (order_id,service_id,quantity,price)
+    VALUES ($oid,$sid,$qty,{$s['price']})");
+
+    mysqli_query($conn,"INSERT INTO print_jobs (order_id) VALUES ($oid)");
+    
+    $success = "Bill created successfully! Order #" . str_pad($oid, 4, '0', STR_PAD_LEFT);
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing - Printing Shop</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f7;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            margin-bottom: 30px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #007AFF;
+            background: linear-gradient(135deg, #007AFF, #5856D6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #666;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background-color: #007AFF;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .page-title {
+            font-size: 32px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .page-subtitle {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-button {
+            background-color: white;
+            color: #333;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        .nav-button:hover, .nav-button.active {
+            background-color: #007AFF;
+            color: white;
+            border-color: #007AFF;
+        }
+        
+        .logout-button {
+            background-color: #ffeaea;
+            color: #d32f2f;
+        }
+        
+        .logout-button:hover {
+            background-color: #d32f2f;
+            color: white;
+            border-color: #d32f2f;
+        }
+        
+        .content-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .form-card, .info-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        select, input[type="number"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background-color: #fafafa;
+        }
+        
+        select:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: #007AFF;
+            background-color: white;
+        }
+        
+        .submit-button {
+            background-color: #007AFF;
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .submit-button:hover {
+            background-color: #0056cc;
+        }
+        
+        .success-message {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            border: 1px solid #C8E6C9;
+        }
+        
+        .info-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 16px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .total-display {
+            background-color: #E3F2FD;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .total-label {
+            font-size: 14px;
+            color: #1976D2;
+            margin-bottom: 5px;
+        }
+        
+        .total-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: #007AFF;
+        }
+        
+        .currency {
+            font-size: 18px;
+            color: #666;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007AFF;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .content-section {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-top {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .navigation {
+                justify-content: center;
+            }
+        }
+        
+        .option-detail {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .price-tag {
+            font-size: 12px;
+            color: #666;
+            background-color: #f0f0f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        .service-select, .customer-select {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+    <script>
+        let services = [];
+        let selectedService = null;
+        
+        // Fetch services data on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchServices();
+            calculateTotal();
+        });
+        
+        function fetchServices() {
+            // In a real application, you would fetch this via AJAX
+            // For now, we'll parse it from the PHP options
+            const serviceSelect = document.querySelector('select[name="service"]');
+            services = [];
+            
+            Array.from(serviceSelect.options).forEach(option => {
+                if (option.value) {
+                    const priceText = option.textContent.match(/₱([\d,.]+)/);
+                    if (priceText) {
+                        services[option.value] = parseFloat(priceText[1].replace(/,/g, ''));
+                    }
+                }
+            });
+        }
+        
+        function calculateTotal() {
+            const serviceSelect = document.querySelector('select[name="service"]');
+            const quantityInput = document.querySelector('input[name="qty"]');
+            const totalDisplay = document.getElementById('total-display');
+            
+            if (serviceSelect.value && quantityInput.value > 0) {
+                const price = services[serviceSelect.value];
+                const quantity = parseInt(quantityInput.value) || 1;
+                const total = price * quantity;
+                
+                totalDisplay.textContent = '₱' + total.toFixed(2);
+                document.getElementById('unit-price').textContent = '₱' + price.toFixed(2);
+                document.getElementById('quantity-display').textContent = quantity;
+            } else {
+                totalDisplay.textContent = '₱0.00';
+                document.getElementById('unit-price').textContent = '₱0.00';
+                document.getElementById('quantity-display').textContent = '0';
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-top">
+                <div class="logo">PrintShop</div>
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <?php 
+                        $user = $_SESSION['user'];
+                        echo strtoupper(substr($user['username'], 0, 1)); 
+                        ?>
+                    </div>
+                    <div>
+                        <strong><?php echo htmlspecialchars($user['fullname']); ?></strong>
+                        <div style="font-size: 12px; color: #888;"><?php echo htmlspecialchars($user['role']); ?></div>
+                    </div>
+                </div>
+            </div>
+            
+            <h1 class="page-title">Billing System</h1>
+            <p class="page-subtitle">Create new bills and manage customer orders</p>
+        </div>
+        
+        <div class="navigation">
+            <a href="dashboard.php" class="nav-button">Dashboard</a>
+            <a href="customers.php" class="nav-button">Customers</a>
+            <a href="services.php" class="nav-button">Services</a>
+            <a href="billing.php" class="nav-button active">Billing</a>
+            <a href="print_jobs.php" class="nav-button">Print Jobs</a>
+            <a href="../auth/logout.php" class="nav-button logout-button">Logout</a>
+        </div>
+        
+        <?php if (isset($success)): ?>
+            <div class="success-message">
+                ✓ <?php echo htmlspecialchars($success); ?> - A print job has been automatically created.
+            </div>
+        <?php endif; ?>
+        
+        <div class="content-section">
+            <div class="form-card">
+                <h2 class="section-title">Create New Bill</h2>
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="customer">Select Customer</label>
+                        <select name="customer" id="customer" class="customer-select" required>
+                            <option value="">Choose a customer...</option>
+                            <?php
+                            $c=mysqli_query($conn,"SELECT * FROM customers");
+                            while($r=mysqli_fetch_assoc($c))
+                                echo "<option value='{$r['id']}'>{$r['name']}</option>";
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="service">Select Service</label>
+                        <select name="service" id="service" class="service-select" required onchange="calculateTotal()">
+                            <option value="">Choose a service...</option>
+                            <?php
+                            $s=mysqli_query($conn,"SELECT * FROM services");
+                            while($r=mysqli_fetch_assoc($s))
+                                echo "<option value='{$r['id']}' data-price='{$r['price']}'>{$r['service_name']} - ₱" . number_format($r['price'], 2) . "</option>";
+                            ?>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="qty">Quantity</label>
+                        <input type="number" id="qty" name="qty" value="1" min="1" oninput="calculateTotal()" required>
+                    </div>
+                    
+                    <button type="submit" name="bill" class="submit-button">Create Bill & Generate Print Job</button>
+                </form>
+            </div>
+            
+            <div class="info-card">
+                <h2 class="section-title">Order Summary</h2>
+                
+                <div class="info-item">
+                    <div class="info-label">Customer</div>
+                    <div id="customer-display" class="info-value">Not selected</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Service</div>
+                    <div id="service-display" class="info-value">Not selected</div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Unit Price</div>
+                    <div class="info-value">
+                        <span id="unit-price">₱0.00</span>
+                    </div>
+                </div>
+                
+                <div class="info-item">
+                    <div class="info-label">Quantity</div>
+                    <div class="info-value">
+                        <span id="quantity-display">0</span> units
+                    </div>
+                </div>
+                
+                <div class="total-display">
+                    <div class="total-label">Total Amount</div>
+                    <div class="total-amount">
+                        <span id="total-display">₱0.00</span>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; font-size: 14px; color: #666; line-height: 1.5;">
+                    <p><strong>Note:</strong> Creating a bill will:</p>
+                    <ol style="margin-left: 20px; margin-top: 8px;">
+                        <li>Create a new order record</li>
+                        <li>Add order items</li>
+                        <li>Automatically generate a print job</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+        
+        <a href="dashboard.php" class="back-link">← Back to Dashboard</a>
+        
+        <script>
+            // Update order summary in real-time
+            document.getElementById('customer').addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                document.getElementById('customer-display').textContent = 
+                    selectedOption.value ? selectedOption.text : 'Not selected';
+            });
+            
+            document.getElementById('service').addEventListener('change', function() {
+                const selectedOption = this.options[this.selectedIndex];
+                document.getElementById('service-display').textContent = 
+                    selectedOption.value ? selectedOption.text.split(' - ')[0] : 'Not selected';
+            });
+            
+            // Initialize displays
+            document.getElementById('customer').dispatchEvent(new Event('change'));
+            document.getElementById('service').dispatchEvent(new Event('change'));
+        </script>
+    </div>
+</body>
+</html>
